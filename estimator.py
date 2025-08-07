@@ -75,7 +75,7 @@ class LLMestimator:
 
     #---utils---
     def _bytes(self, params: int) -> int:
-        return int(params) @ self.weight_bytes
+        return int(params) * self.weight_bytes
 
     def _fmt(self, n_bytes: float) -> str:
         gb = n_bytes / (1024**3)
@@ -86,37 +86,78 @@ class LLMestimator:
 
     #---estimation methods---
     def estimate_embeddings_bytes(self, include_pos_embed:bool = False) -> float:
-        #todo
-        return 
+        embed_params = self.vocab_size * self.d_model
+        pos_params = self.max_position_embeddings * self.d_model if include_pos_embed else 0
+        return self._bytes(embed_params + pos_params)
+    
     def estimate_lm_head_bytes(self) -> float:
-        #todo
-        return 
+        if self.tie_embeddings:
+            lm_head_params = 0
+        else:
+            lm_head_params = self.vocab_size * self.d_model
+        return self._bytes(lm_head_params)
 
-    def estimate_attention_bytes(self, attention_bias: bool = False) -> float:
-        #todo
-        return
+    def estimate_attention_one_layer_bytes(self, attention_bias: bool = False) -> float:
+        d, h, h_kv, hd = self.d_model, self.n_heads, self.n_kv_heads, self.head_dim
+        
+        q_out = d
+        k_out = h_kv * hd
+        v_out = h_kv * hd
+        o_out = d
+
+        q_params = d * q_out
+        k_params = d * k_out
+        v_params = d * v_out
+        o_params = d * o_out
+
+        bias_params = q_out + k_out + v_out + o_out if attention_bias else 0
+
+        per_layer_params = q_params + k_params + v_params + o_params + bias_params
+
+        return self._bytes(per_layer_params)
     
-    def estimate_mlp_bytes(self, mlp_bias: bool = False) -> float:
-        #todo
-        return
+    def estimate_mlp_one_layer_bytes(self, mlp_bias: bool = False) -> float:
+        d, i = self.d_model, self.intermediate_size
+
+        gate_params = d * i        
+        up_params   = d * i
+        down_params = i * d
+
+        bias_total = 0
+        if mlp_bias:
+            bias_total = i + i + d
+        
+        per_layer_params = gate_params + up_params + down_params + bias_total
+
+        return self._bytes(per_layer_params)
     
-    def estimate_norm_bytes(self) -> float:
-        #todo
-        return
+
     
-    def estimate_weights_bytes(
-            self,
-            #todo
+    def estimate_norm_once_bytes(self) -> float:
+        params = self.d_model
+        return self._bytes(params)
+    
+    
+    def estimate_weights_bytes(self, 
+                                include_pos_embed: bool = False,
+                                attention_bias: bool = False,
+                                mlp_bias: bool = False
     ) -> float:
-        #todo
-        return
+        
+        emb_b = self.estimate_embeddings_bytes(include_pos_embed)
+        lm_b = self.estimate_lm_head_bytes()
+
+        attn_b = self.n_layers * self.estimate_attention_one_layer_bytes(attention_bias)
+        mlp_b  = self.n_layers * self.estimate_mlp_one_layer_bytes(mlp_bias)
+        norm_b = (2 * self.n_layers + 1) * self.estimate_norm_once_bytes()
+
+        return emb_b + lm_b + attn_b + mlp_b + norm_b
     
-    def estimate_kv_cache_bytes(self, 
-                                #todo
-    ) -> float:
-        #todo
-        return
-    
+    def estimate_kv_cache_bytes(self,
+                                # todo
+    )
+        return 0
+
     def memory_report():
         #todo
         return
