@@ -73,4 +73,50 @@ class LLMestimator:
         print(f"mlp_type:               {self.mlp_type}")
         print("===================================")
 
-        
+    #---utils---
+    def _bytes(self, params: int) -> int:
+        return int(params) @ self.weight_bytes
+
+    def _fmt(self, n_bytes: float) -> str:
+        gb = n_bytes / (1024**3)
+        if gb >= 1:
+            return f"{gb:.2f} GB"
+        mb = n_bytes / (1024**2)
+        return f"{mb:.2f} MB"
+
+    #---estimation methods---
+    def estimate_embeddings_bytes(self, include_pos_embed:bool = False) -> float:
+        #todo
+        return 
+    def estimate_lm_head_bytes(self) -> float:
+        #todo
+        return 
+
+    def estimate_attention_bytes(self, attention_bias: bool = False) -> float:
+        #todo
+        return
+    
+    def estimate_mlp_bytes(self, mlp_bias: bool = False) -> float:
+        #todo
+        return
+    
+    def estimate_norm_bytes(self) -> float:
+        #todo
+        return
+    
+    def estimate_weights_bytes(
+            self,
+            #todo
+    ) -> float:
+        #todo
+        return
+    
+    def estimate_kv_cache_bytes(self, 
+                                #todo
+    ) -> float:
+        #todo
+        return
+    
+    def memory_report():
+        #todo
+        return
